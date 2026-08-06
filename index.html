@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>MyDataBkt</title>
+<style>
+  :root { --green:#1DB954; --ink:#1a1a1a; --muted:#6b7280; --line:#e5e7eb; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; margin:0; padding:28px; color:var(--ink); background:#fafafa; }
+  h1 { font-size:20px; margin:0 0 2px; }
+  .sub { color:var(--muted); font-size:13px; margin:0 0 22px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:14px; }
+  .row { display:flex; align-items:center; gap:10px; }
+  .dot { width:11px; height:11px; border-radius:50%; background:#c9ccd1; flex:none; }
+  .dot.on { background:var(--green); box-shadow:0 0 0 3px rgba(29,185,84,.18); }
+  .label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  .val { font-size:14px; word-break:break-all; }
+  .muted { color:var(--muted); }
+  button { font-size:14px; font-weight:600; color:#fff; background:var(--green); border:0; border-radius:9px; padding:11px 16px; cursor:pointer; width:100%; }
+  button:disabled { background:#c9ccd1; cursor:default; }
+  button.secondary { background:#111827; }
+  .hide { display:none; }
+  .foot { font-size:11px; color:var(--muted); text-align:center; margin-top:18px; }
+</style>
+</head>
+<body>
+  <h1>MyDataBkt</h1>
+  <p class="sub">Your files stay on this Mac. Shared only under the Green Shield.</p>
+  <div id="step-signin" class="card hide">
+    <div class="label">Step 1</div>
+    <div class="val" style="margin-bottom:12px">Sign in with your Opnli account to activate this bucket.</div>
+    <button id="btn-signin">Sign in with Opnli</button>
+  </div>
+  <div id="step-folder" class="card hide">
+    <div class="label">Step 2</div>
+    <div class="val" style="margin-bottom:12px">Choose the folder to share as your bucket.</div>
+    <button id="btn-folder" class="secondary">Choose Folder…</button>
+  </div>
+  <div id="live" class="card hide">
+    <div class="row" style="margin-bottom:14px"><span id="dot" class="dot"></span><span id="conn" class="val">Connecting…</span></div>
+    <div class="label">Folder</div><div id="folder" class="val muted">—</div>
+    <div class="label" style="margin-top:12px">Bucket address</div><div id="bkt" class="val muted">—</div>
+  </div>
+  <div id="acct" class="foot"></div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  function render(s) {
+    $('step-signin').classList.toggle('hide', s.activated);
+    $('step-folder').classList.toggle('hide', !(s.activated && !s.folder));
+    $('live').classList.toggle('hide', !(s.activated && s.folder));
+    $('acct').textContent = s.email ? ('Signed in as ' + s.email) : '';
+    if (s.folder) $('folder').textContent = s.folder;
+    if (s.bktAddress) $('bkt').textContent = s.bktAddress;
+    $('dot').classList.toggle('on', s.connected);
+    $('conn').textContent = s.connected ? 'Connected — your bucket is live' : 'Connecting…';
+  }
+  $('btn-signin').onclick = () => window.api.signIn();
+  $('btn-folder').onclick = async () => { $('btn-folder').disabled = true; await window.api.pickFolder(); $('btn-folder').disabled = false; };
+  window.api.onStatus(render);
+  window.api.getStatus().then(render);
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+{
+  "name": "mydatabkt",
+  "version": "1.0.0-beta.1",
+  "description": "MyDataBkt — your files become a private bucket on the Openly Trusted Network, served only under the Green Shield",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "keywords": [],
+  "author": "Openly Personal Networks, Inc. (Opn.li)",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "pdf-parse": "^1.1.4",
+    "ws": "^8.21.2"
+  },
+  "productName": "MyDataBkt",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "build": {
+    "appId": "com.opnli.mydatabkt",
+    "productName": "MyDataBkt",
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg"
+      ],
+      "identity": "BA63999CD184C59C7BCEB2B44DFCC0E026A9ABC5",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "notarize": false
+    },
+    "dmg": {
+      "title": "MyDataBkt v${version}",
+      "contents": [
+        {
+          "x": 140,
+          "y": 190
+        },
+        {
+          "x": 400,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "agent.cjs",
+      "verify.cjs",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": []
+  }
+}

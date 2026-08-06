@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.bak
+*.bak-*
+.DS_Store
+test-bucket/
+live-test/
+.env
+.api-key
+*.pem
+account.json
