@@ -1,6 +1,6 @@
 {
   "name": "mydatabkt",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.5",
   "description": "MyDataBkt \u2014 your files become a private bucket on the Openly Trusted Network, served only under the Green Shield",
   "main": "main.js",
   "scripts": {
