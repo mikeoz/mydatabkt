@@ -1,7 +1,7 @@
 {
   "name": "mydatabkt",
-  "version": "1.0.0-beta.1",
-  "description": "MyDataBkt — your files become a private bucket on the Openly Trusted Network, served only under the Green Shield",
+  "version": "1.0.0-beta.4",
+  "description": "MyDataBkt \u2014 your files become a private bucket on the Openly Trusted Network, served only under the Green Shield",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -31,7 +31,7 @@
       "identity": "BA63999CD184C59C7BCEB2B44DFCC0E026A9ABC5",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "notarize": false
+      "notarize": true
     },
     "dmg": {
       "title": "MyDataBkt v${version}",
@@ -49,6 +49,7 @@
       ]
     },
     "files": [
+      "index.html",
       "main.js",
       "preload.js",
       "agent.cjs",

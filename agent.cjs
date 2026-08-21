@@ -54,23 +54,45 @@ function parseArgs() {
   return config;
 }
 
-// --- Manifest: index the designated folder ---
+// --- Manifest: recursive index of the designated folder ---
+const DOTFILE_RE = /(?:^|[\/])(?:\.[^/\\])/;
+const MAX_MANIFEST_FILES = 5000;
+
+function isDotfile(name) {
+  return name.startsWith('.') || name.startsWith('._');
+}
+
 function buildManifest(folderPath) {
   if (!fs.existsSync(folderPath)) { console.error('Error: folder not found: ' + folderPath); process.exit(1); }
-  const entries = fs.readdirSync(folderPath);
   const manifest = [];
-  const mimeTypes = { '.pdf':'application/pdf', '.csv':'text/csv', '.json':'application/json', '.txt':'text/plain', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png' };
-  for (const entry of entries) {
-    const fullPath = path.join(folderPath, entry);
-    const stat = fs.statSync(fullPath);
-    if (!stat.isFile()) continue;
-    manifest.push({
-      file_id: crypto.createHash('sha256').update(entry).digest('hex').slice(0, 16),
-      filename: entry,
-      size_bytes: stat.size,
-      mime_type: mimeTypes[path.extname(entry).toLowerCase()] || 'application/octet-stream',
-      modified: stat.mtime.toISOString(),
-    });
+  const mimeTypes = { '.pdf':'application/pdf', '.csv':'text/csv', '.json':'application/json', '.txt':'text/plain', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.doc':'application/msword', '.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.xls':'application/vnd.ms-excel', '.xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.md':'text/markdown', '.html':'text/html', '.htm':'text/html', '.mov':'video/quicktime', '.mp4':'video/mp4', '.zip':'application/zip' };
+
+  function walk(dir, rel) {
+    var entries;
+    try { entries = fs.readdirSync(dir); } catch (e) { console.warn('Cannot read ' + dir + ': ' + e.message); return; }
+    for (var i = 0; i < entries.length; i++) {
+      var name = entries[i];
+      if (isDotfile(name)) continue;
+      var fullPath = path.join(dir, name);
+      var relPath = rel ? rel + '/' + name : name;
+      var stat;
+      try { stat = fs.statSync(fullPath); } catch (e) { continue; }
+      if (stat.isDirectory()) { walk(fullPath, relPath); continue; }
+      if (!stat.isFile()) continue;
+      if (manifest.length >= MAX_MANIFEST_FILES) return;
+      manifest.push({
+        file_id: crypto.createHash('sha256').update(relPath).digest('hex').slice(0, 16),
+        filename: relPath,
+        size_bytes: stat.size,
+        mime_type: mimeTypes[path.extname(name).toLowerCase()] || 'application/octet-stream',
+        modified: stat.mtime.toISOString(),
+      });
+    }
+  }
+
+  walk(folderPath, '');
+  if (manifest.length >= MAX_MANIFEST_FILES) {
+    console.warn('Manifest capped at ' + MAX_MANIFEST_FILES + ' files. Some files may not appear.');
   }
   return manifest;
 }
@@ -270,11 +292,12 @@ class RelayConnection {
   startWatching() {
     try {
       const self = this;
-      this._watcher = fs.watch(this.folderPath, { persistent: true }, function () {
+      this._watcher = fs.watch(this.folderPath, { persistent: true, recursive: true }, function (eventType, filename) {
+        if (filename && isDotfile(path.basename(filename))) return;
         if (self._reindexTimer) clearTimeout(self._reindexTimer);
         self._reindexTimer = setTimeout(function () { self.reindex(); }, 600);
       });
-      console.log('Watching folder for changes (live index active).');
+      console.log('Watching folder recursively for changes (live index active).');
     } catch (e) {
       console.warn('Folder watch unavailable; live index disabled: ' + e.message);
     }

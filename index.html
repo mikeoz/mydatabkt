@@ -17,9 +17,14 @@
   .label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
   .val { font-size:14px; word-break:break-all; }
   .muted { color:var(--muted); }
-  button { font-size:14px; font-weight:600; color:#fff; background:var(--green); border:0; border-radius:9px; padding:11px 16px; cursor:pointer; width:100%; }
+  .hint { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5; }
+  button { font-family:inherit; font-size:14px; font-weight:600; color:#fff; background:var(--green); border:0; border-radius:9px; padding:11px 16px; cursor:pointer; width:100%; }
   button:disabled { background:#c9ccd1; cursor:default; }
   button.secondary { background:#111827; }
+  button.small { width:auto; padding:6px 12px; font-size:12px; }
+  .addr-row { display:flex; align-items:center; gap:10px; justify-content:space-between; }
+  .whatnow { border-top:1px solid var(--line); margin-top:16px; padding-top:14px; }
+  .whatnow p { font-size:13px; line-height:1.5; margin:0 0 6px; }
   .hide { display:none; }
   .foot { font-size:11px; color:var(--muted); text-align:center; margin-top:18px; }
 </style>
@@ -27,21 +32,35 @@
 <body>
   <h1>MyDataBkt</h1>
   <p class="sub">Your files stay on this Mac. Shared only under the Green Shield.</p>
+
   <div id="step-signin" class="card hide">
     <div class="label">Step 1</div>
     <div class="val" style="margin-bottom:12px">Sign in with your Opnli account to activate this bucket.</div>
     <button id="btn-signin">Sign in with Opnli</button>
   </div>
+
   <div id="step-folder" class="card hide">
     <div class="label">Step 2</div>
-    <div class="val" style="margin-bottom:12px">Choose the folder to share as your bucket.</div>
-    <button id="btn-folder" class="secondary">Choose Folder…</button>
+    <div class="val" style="margin-bottom:12px">Choose the folder that becomes your bucket.</div>
+    <button id="btn-folder" class="secondary">Choose a folder</button>
+    <div class="hint">Tip: pick an existing folder, or create a new one first (for example a folder named MyDataBkt on your Desktop) so it is easy to find. Anything you put inside it becomes part of your bucket.</div>
   </div>
+
   <div id="live" class="card hide">
-    <div class="row" style="margin-bottom:14px"><span id="dot" class="dot"></span><span id="conn" class="val">Connecting…</span></div>
-    <div class="label">Folder</div><div id="folder" class="val muted">—</div>
-    <div class="label" style="margin-top:12px">Bucket address</div><div id="bkt" class="val muted">—</div>
+    <div class="row" style="margin-bottom:14px"><span id="dot" class="dot"></span><span id="conn" class="val">Connecting...</span></div>
+    <div class="label">Folder</div><div id="folder" class="val muted">-</div>
+    <div class="label" style="margin-top:12px">Bucket address</div>
+    <div class="addr-row">
+      <div id="bkt" class="val muted">-</div>
+      <button id="btn-copy" class="small">Copy</button>
+    </div>
+    <div class="whatnow">
+      <div class="label">What now?</div>
+      <p>Open your trusted AI (like CROCbox or Hermes) and ask it to work with a file in your bucket. The Green Shield will ask your OK before anything happens.</p>
+      <p class="muted">New here? Read the quick guide at openlytrusted.ai/guide</p>
+    </div>
   </div>
+
   <div id="acct" class="foot"></div>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -53,10 +72,16 @@
     if (s.folder) $('folder').textContent = s.folder;
     if (s.bktAddress) $('bkt').textContent = s.bktAddress;
     $('dot').classList.toggle('on', s.connected);
-    $('conn').textContent = s.connected ? 'Connected — your bucket is live' : 'Connecting…';
+    $('conn').textContent = s.connected ? 'Connected - your bucket is live' : 'Connecting...';
   }
   $('btn-signin').onclick = () => window.api.signIn();
   $('btn-folder').onclick = async () => { $('btn-folder').disabled = true; await window.api.pickFolder(); $('btn-folder').disabled = false; };
+  $('btn-copy').onclick = async () => {
+    const addr = $('bkt').textContent; if (!addr || addr === '-') return;
+    try { await navigator.clipboard.writeText(addr); }
+    catch (e) { const t = document.createElement('textarea'); t.value = addr; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (_) {} document.body.removeChild(t); }
+    const b = $('btn-copy'), old = b.textContent; b.textContent = 'Copied'; setTimeout(() => { b.textContent = old; }, 1400);
+  };
   window.api.onStatus(render);
   window.api.getStatus().then(render);
 </script>
