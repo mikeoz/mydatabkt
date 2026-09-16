@@ -214,7 +214,7 @@ class RelayConnection {
     const scopedFiles = session.scope && session.scope.file_ids;
     if (Array.isArray(scopedFiles) && !scopedFiles.includes(file_id)) { this.send({ type: 'file-response', request_id, error: 'File not in authorized scope', status: 403 }); return; }
     if (await this.checkRevoked(session.decision_id)) { this._sessionTokens.delete(session_token); this.send({ type: 'file-response', request_id, error: 'Consent revoked', status: 403 }); return; }
-    const entry = this.manifest.find(f => f.file_id === file_id);
+    const entry = this.manifest.find(f => f.file_id === file_id || f.filename === file_id);
     if (!entry) { this.send({ type: 'file-response', request_id, error: 'File not found', status: 404 }); return; }
     try {
       const fullPath = path.join(this.folderPath, entry.filename);
