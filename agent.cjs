@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 /**
- * Local Bucket Agent — OTN Build 15-B (Task C-1, updated)
+ * Local Bucket Agent — OTN Build 16 (Helpful Phase B)
  *
  * A file-serving agent that runs on the NHB's machine. It:
  *   1. Indexes a designated folder into a manifest (filename, size, type).
  *   2. Connects outbound to the OTN relay service via WebSocket.
  *   3. Serves files when the relay routes an authorized request.
- *   4. Extracts text from PDFs on the NHB's machine before sending,
+ *   4. Writes files when the relay routes an authorized write request.
+ *   5. Extracts text from PDFs on the NHB's machine before sending,
  *      so the agent receives readable text (not opaque bytes).
+ *
+ * Build 16: added write-request handler for consent-gated file writes.
  *
  * Usage:
  *   node local-bkt-agent.js --folder ~/Desktop/MyRecords --relay wss://otn-relay.fly.dev
@@ -110,6 +113,15 @@ async function extractPdfText(filePath) {
   }
 }
 
+// --- Path safety: ensure write targets stay inside the bucket folder ---
+function isSafePath(filePath) {
+  const normalized = path.normalize(filePath);
+  if (path.isAbsolute(normalized)) return false;
+  if (normalized.startsWith('..')) return false;
+  if (normalized.includes('..'+path.sep)) return false;
+  return true;
+}
+
 // --- Relay connection: outbound WebSocket ---
 class RelayConnection {
   constructor(config, manifest, folderPath) {
@@ -158,6 +170,7 @@ class RelayConnection {
       case 'agent-authorize': this.handleAuthorize(msg); break;
       case 'manifest-request': this.handleManifestRequest(msg); break;
       case 'file-request': this.handleFileRequest(msg); break;
+      case 'write-request': this.handleWriteRequest(msg); break;
       case 'ping': this.send({ type: 'pong', request_id: msg.request_id }); break;
       case 'error': console.error('Relay error: ' + msg.message); break;
       default: console.log('Unknown message type: ' + msg.type);
@@ -253,6 +266,29 @@ class RelayConnection {
     } catch (err) {
       console.error('Error reading file: ' + err.message);
       this.send({ type: 'file-response', request_id, error: 'File read error', status: 500 });
+    }
+  }
+
+  async handleWriteRequest(msg) {
+    const { request_id, session_token, file_path, content } = msg;
+    const session = this.validateToken(session_token);
+    if (!session) { this.send({ type: 'write-response', request_id, error: 'Invalid or expired token', status: 403 }); return; }
+    const actions = (session.scope && session.scope.actions) || [];
+    if (!actions.includes('write')) { this.send({ type: 'write-response', request_id, error: 'Scope does not permit write', status: 403 }); return; }
+    if (await this.checkRevoked(session.decision_id)) { this._sessionTokens.delete(session_token); this.send({ type: 'write-response', request_id, error: 'Consent revoked', status: 403 }); return; }
+    if (!file_path || typeof content !== 'string') { this.send({ type: 'write-response', request_id, error: 'file_path and content required', status: 400 }); return; }
+    if (!isSafePath(file_path)) { this.send({ type: 'write-response', request_id, error: 'Invalid file path', status: 400 }); return; }
+    try {
+      const fullPath = path.join(this.folderPath, file_path);
+      const dir = path.dirname(fullPath);
+      if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true }); }
+      fs.writeFileSync(fullPath, content, 'utf8');
+      console.log('Wrote file: ' + file_path + ' (' + content.length + ' chars)');
+      this.reindex();
+      this.send({ type: 'write-response', request_id, file_path: file_path, size_bytes: Buffer.byteLength(content, 'utf8'), status: 200 });
+    } catch (err) {
+      console.error('Error writing file: ' + err.message);
+      this.send({ type: 'write-response', request_id, error: 'File write error: ' + err.message, status: 500 });
     }
   }
 
