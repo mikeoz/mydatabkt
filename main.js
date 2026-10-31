@@ -93,7 +93,18 @@ function startAgent() {
   relay = new RelayConnection(agentConfig, buildManifest(config.folder), config.folder);
   relay.connect();
   relay.startWatching();
-  try { app.setLoginItemSettings({ openAtLogin: true }); } catch (e) {}
+  // Start at login: setLoginItemSettings works on Mac and Windows.
+  // On Linux, create a .desktop autostart file instead.
+  if (process.platform === 'linux') {
+    try {
+      const autostartDir = require('path').join(require('os').homedir(), '.config', 'autostart');
+      require('fs').mkdirSync(autostartDir, { recursive: true });
+      const desktop = '[Desktop Entry]\nType=Application\nName=MyDataBkt\nExec=' + process.execPath + '\nX-GNOME-Autostart-enabled=true\n';
+      require('fs').writeFileSync(require('path').join(autostartDir, 'mydatabkt.desktop'), desktop);
+    } catch (e) {}
+  } else {
+    try { app.setLoginItemSettings({ openAtLogin: true }); } catch (e) {}
+  }
 }
 
 ipcMain.handle('get-status', () => currentStatus());

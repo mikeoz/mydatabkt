@@ -57,6 +57,13 @@
       "package.json",
       "node_modules/**/*"
     ],
-    "extraResources": []
+    "extraResources": [],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility",
+      "icon": "build/icon.png"
+    }
   }
 }
